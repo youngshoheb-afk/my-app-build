@@ -35,7 +35,7 @@ jobs:
       - name: Sign APK (Debug Key)
         run: |
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          apksigner sign --ks debug.keystore --ks-pass pass:android app-release-unsigned.apk
+          apksigner sign --ks debug.keystore --ks-pass pass:android --min-sdk-version 21 app-release-unsigned.apk
           mv app-release-unsigned.apk app-release.apk
 
       - name: Upload APK Artifact
