@@ -1,4 +1,4 @@
-name: Build Android APK & AAB
+name: Build Android APK
 
 on:
   push:
@@ -8,37 +8,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+      - name: Setup Build Tools
+        run: sudo apt-get install -y android-sdk apksigner zipalign zip
 
-      - name: Install Android SDK & Build Tools
+      - name: Clean & Pack APK
         run: |
-          sudo apt-get update
-          sudo apt-get install -y android-sdk apksigner zipalign zip
-
-      - name: Create Unsigned APK
-        run: |
-          zip -r unaligned.apk . -x "*.git*" "*.github*"
+          # पुरानी सिग्नेचर हटाएं ताकि कोई Conflict न हो
+          rm -rf META-INF
+          # बिना compression के APK पैक करें (Android के लिए ज़रूरी है)
+          zip -r -0 app-release-unsigned.apk . -x "*.git*" "*.github*"
 
       - name: Zipalign APK
         run: |
-          zipalign -v 4 unaligned.apk app-release-unsigned.apk
+          zipalign -v 4 app-release-unsigned.apk app-aligned.apk
 
-      - name: Sign APK (Debug Key)
+      - name: Sign APK
         run: |
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          apksigner sign --ks debug.keystore --ks-pass pass:android --min-sdk-version 21 app-release-unsigned.apk
-          mv app-release-unsigned.apk app-release.apk
+          apksigner sign --ks debug.keystore --ks-pass pass:android --min-sdk-version 21 app-aligned.apk
+          mv app-aligned.apk app-release.apk
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: App-Release-APK
