@@ -1,0 +1,63 @@
+name: Android Gridle Build (Universal_App_Builder)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APKs & AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🔑 Grant Execute Permissions for Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: 🔨 Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: 📦 Build Release Android App Bundle (AAB)
+        run: ./gradlew bundleRelease --stacktrace
+
+      - name: 📁 Bundle APKs into APKs.zip
+        run: |
+          mkdir -p dist_artifacts
+          cd app/build/outputs/apk/debug/
+          zip -r ../../../../../dist_artifacts/APKs.zip .
+          cd ../../../../../
+
+      - name: 📁 Bundle AAB into AAB.zip
+        run: |
+          mkdir -p dist_artifacts
+          if [ -d "app/build/outputs/bundle/release" ]; then
+            cd app/build/outputs/bundle/release/
+            zip -r ../../../../../dist_artifacts/AAB.zip .
+            cd ../../../../../
+          fi
+
+      - name: 🚀 Upload APKs.zip Artifact (Available in GitHub Action Steps)
+        uses: actions/upload-artifact@v4
+        with:
+          name: APKs.zip
+          path: dist_artifacts/APKs.zip
+          if-no-files-found: warn
+
+      - name: 🚀 Upload AAB.zip Artifact (Available in GitHub Action Steps)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AAB.zip
+          path: dist_artifacts/AAB.zip
+          if-no-files-found: warn
